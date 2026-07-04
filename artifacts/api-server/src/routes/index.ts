@@ -6,6 +6,7 @@ import moodRouter from "./mood";
 import hotlinesRouter from "./hotlines";
 import faqRouter from "./faq";
 import statsRouter from "./stats";
+import anthropicRouter from "./anthropic/index";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use("/mood", moodRouter);
 router.use("/hotlines", hotlinesRouter);
 router.use("/faq", faqRouter);
 router.use("/stats", statsRouter);
+router.use("/anthropic", anthropicRouter);
 
 export default router;
