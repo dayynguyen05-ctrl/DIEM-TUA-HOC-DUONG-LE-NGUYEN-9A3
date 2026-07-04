@@ -1,22 +1,31 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Diem Tua Hoc Duong API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: chat
+    description: Chat support operations
+  - name: resources
+    description: Resource articles
+  - name: mood
+    description: Mood tracking
+  - name: hotlines
+    description: Emergency hotlines
+  - name: faq
+    description: FAQ management
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +33,359 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /chat/message:
+    post:
+      operationId: sendChatMessage
+      tags: [chat]
+      summary: Send a chat message and get a rule-based response
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatMessageInput"
+      responses:
+        "200":
+          description: Bot response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatResponse"
+
+  /chat/history:
+    get:
+      operationId: getChatHistory
+      tags: [chat]
+      summary: Get recent chat messages for a session
+      parameters:
+        - name: sessionId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChatMessage"
+
+  /resources:
+    get:
+      operationId: listResources
+      tags: [resources]
+      summary: List support resources/articles
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: List of resources
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Resource"
+
+  /resources/{id}:
+    get:
+      operationId: getResource
+      tags: [resources]
+      summary: Get a single resource by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Resource detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resource"
+        "404":
+          description: Not found
+
+  /resources/featured:
+    get:
+      operationId: getFeaturedResources
+      tags: [resources]
+      summary: Get featured/pinned resources for homepage
+      responses:
+        "200":
+          description: Featured resources
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Resource"
+
+  /mood:
+    post:
+      operationId: logMood
+      tags: [mood]
+      summary: Log a mood entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MoodInput"
+      responses:
+        "201":
+          description: Mood logged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MoodEntry"
+
+    get:
+      operationId: getMoodHistory
+      tags: [mood]
+      summary: Get mood history for a session
+      parameters:
+        - name: sessionId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 7
+      responses:
+        "200":
+          description: Mood history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MoodEntry"
+
+  /hotlines:
+    get:
+      operationId: listHotlines
+      tags: [hotlines]
+      summary: List emergency hotlines and support contacts
+      responses:
+        "200":
+          description: List of hotlines
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Hotline"
+
+  /faq:
+    get:
+      operationId: listFaq
+      tags: [faq]
+      summary: List FAQ categories with questions
+      responses:
+        "200":
+          description: FAQ list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FaqCategory"
+
+  /stats/overview:
+    get:
+      operationId: getStatsOverview
+      tags: [health]
+      summary: Get app overview stats
+      responses:
+        "200":
+          description: Overview stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatsOverview"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    ChatMessageInput:
+      type: object
+      required: [sessionId, text]
+      properties:
+        sessionId:
+          type: string
+        text:
+          type: string
+
+    ChatMessage:
+      type: object
+      required: [id, sessionId, text, sender, createdAt]
+      properties:
+        id:
+          type: integer
+        sessionId:
+          type: string
+        text:
+          type: string
+        sender:
+          type: string
+          enum: [user, bot]
+        createdAt:
+          type: string
+
+    ChatResponse:
+      type: object
+      required: [userMessage, botMessage]
+      properties:
+        userMessage:
+          $ref: "#/components/schemas/ChatMessage"
+        botMessage:
+          $ref: "#/components/schemas/ChatMessage"
+        suggestedReplies:
+          type: array
+          items:
+            type: string
+        category:
+          type: ["string", "null"]
+
+    Resource:
+      type: object
+      required: [id, title, summary, category, readMinutes, createdAt]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        summary:
+          type: string
+        content:
+          type: ["string", "null"]
+        category:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        readMinutes:
+          type: integer
+        imageUrl:
+          type: ["string", "null"]
+        featured:
+          type: boolean
+        createdAt:
+          type: string
+
+    MoodInput:
+      type: object
+      required: [sessionId, mood, score]
+      properties:
+        sessionId:
+          type: string
+        mood:
+          type: string
+          enum: [very_sad, sad, neutral, happy, very_happy]
+        score:
+          type: integer
+        note:
+          type: ["string", "null"]
+
+    MoodEntry:
+      type: object
+      required: [id, sessionId, mood, score, createdAt]
+      properties:
+        id:
+          type: integer
+        sessionId:
+          type: string
+        mood:
+          type: string
+        score:
+          type: integer
+        note:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    Hotline:
+      type: object
+      required: [id, name, phone, description, available24h]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: string
+        description:
+          type: string
+        available24h:
+          type: boolean
+        category:
+          type: string
+
+    FaqCategory:
+      type: object
+      required: [id, name, questions]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/FaqItem"
+
+    FaqItem:
+      type: object
+      required: [id, question, answer]
+      properties:
+        id:
+          type: integer
+        question:
+          type: string
+        answer:
+          type: string
+
+    StatsOverview:
+      type: object
+      required: [totalResources, totalHotlines, totalFaqItems, supportCategories]
+      properties:
+        totalResources:
+          type: integer
+        totalHotlines:
+          type: integer
+        totalFaqItems:
+          type: integer
+        supportCategories:
+          type: array
+          items:
+            type: string

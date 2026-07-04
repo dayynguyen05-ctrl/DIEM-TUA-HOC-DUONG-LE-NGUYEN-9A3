@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "Điểm Tựa Học Đường"
+version = "1.0.0"
+id = "artifacts/diem-tua-hoc-duong"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18117
+
+[services.development]
+run = "pnpm --filter @workspace/diem-tua-hoc-duong run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/diem-tua-hoc-duong", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/diem-tua-hoc-duong/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18117"
+BASE_PATH = "/"
