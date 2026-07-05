@@ -1,15 +1,14 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Bot, User, Loader2, Sparkles } from "lucide-react";
+import { Send, Bot, User, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getSessionId } from "@/lib/session";
 
 interface Message {
   id: number;
-  role: "user" | "assistant";
-  content: string;
-  streaming?: boolean;
+  role: "user" | "bot";
+  text: string;
 }
 
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
@@ -34,7 +33,7 @@ function formatText(text: string) {
 }
 
 function MessageBubble({ msg }: { msg: Message }) {
-  const isBot = msg.role === "assistant";
+  const isBot = msg.role === "bot";
   return (
     <div
       className={`flex ${isBot ? "justify-start" : "justify-end"} animate-in fade-in slide-in-from-bottom-2`}
@@ -56,20 +55,7 @@ function MessageBubble({ msg }: { msg: Message }) {
               : "bg-primary text-primary-foreground rounded-tr-none shadow-md"
           }`}
         >
-          {msg.streaming && msg.content === "" ? (
-            <span className="flex items-center gap-1 py-1">
-              <span className="w-2 h-2 rounded-full bg-primary/50 animate-bounce" />
-              <span className="w-2 h-2 rounded-full bg-primary/50 animate-bounce" style={{ animationDelay: "0.2s" }} />
-              <span className="w-2 h-2 rounded-full bg-primary/50 animate-bounce" style={{ animationDelay: "0.4s" }} />
-            </span>
-          ) : (
-            <>
-              {formatText(msg.content)}
-              {msg.streaming && (
-                <span className="inline-block w-[2px] h-[1em] bg-primary/60 ml-[1px] align-middle animate-pulse" />
-              )}
-            </>
-          )}
+          {formatText(msg.text)}
         </div>
       </div>
     </div>
@@ -81,105 +67,109 @@ export default function Chat() {
   const sessionId = getSessionId();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
-  const [conversationId, setConversationId] = useState<number | null>(null);
+  const [suggestedReplies, setSuggestedReplies] = useState<string[]>([]);
   const [isSending, setIsSending] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const nextId = useRef(1);
 
+  // Auto-scroll on new messages
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
 
-  const getOrCreateConversation = useCallback(async (): Promise<number> => {
-    if (conversationId) return conversationId;
-    const res = await fetch(`${BASE_URL}/api/anthropic/conversations`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: "Cuộc trò chuyện mới", sessionId }),
-    });
-    if (!res.ok) throw new Error("Không thể tạo cuộc trò chuyện");
-    const data = await res.json() as { id: number };
-    setConversationId(data.id);
-    return data.id;
-  }, [conversationId, sessionId]);
-
-  const handleSend = useCallback(async (text: string) => {
-    if (!text.trim() || isSending) return;
-
-    const trimmed = text.slice(0, 4000);
-    setIsSending(true);
-    setInput("");
-
-    const userMsg: Message = { id: nextId.current++, role: "user", content: trimmed };
-    const botMsgId = nextId.current++;
-    const botMsg: Message = { id: botMsgId, role: "assistant", content: "", streaming: true };
-    setMessages((prev) => [...prev, userMsg, botMsg]);
-
-    try {
-      const convId = await getOrCreateConversation();
-
-      const res = await fetch(`${BASE_URL}/api/anthropic/conversations/${convId}/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: trimmed, sessionId }),
-      });
-
-      if (!res.ok || !res.body) {
-        const errData = await res.json().catch(() => ({})) as { error?: string };
-        throw new Error(errData.error ?? "Lỗi kết nối với server");
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      outer: while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          let json: { content?: string; done?: boolean; error?: string };
-          try {
-            json = JSON.parse(line.slice(6)) as typeof json;
-          } catch {
-            continue;
-          }
-          if (json.error) throw new Error(json.error);
-          if (json.done) break outer;
-          if (json.content) {
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === botMsgId ? { ...m, content: m.content + json.content! } : m
-              )
-            );
-          }
+  // Load chat history on mount — merge into state so concurrent sends are not overwritten
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch(
+          `${BASE_URL}/api/chat/history?sessionId=${encodeURIComponent(sessionId)}&limit=50`
+        );
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as Array<{
+          id: number;
+          text: string;
+          sender: "user" | "bot";
+        }>;
+        if (data.length > 0 && !cancelled) {
+          const historyMsgs = data.map((m) => ({
+            id: nextId.current++,
+            role: m.sender,
+            text: m.text,
+          }));
+          // Prepend history; keep any messages the user already sent during load
+          setMessages((prev) => [...historyMsgs, ...prev]);
         }
+      } catch {
+        // history load failure is non-critical
+      } finally {
+        if (!cancelled) setIsLoadingHistory(false);
       }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [sessionId]);
 
-      // Mark streaming done
-      setMessages((prev) =>
-        prev.map((m) => (m.id === botMsgId ? { ...m, streaming: false } : m))
-      );
-      setTimeout(() => inputRef.current?.focus(), 100);
-    } catch (err) {
-      // Remove empty bot bubble on error
-      setMessages((prev) => prev.filter((m) => m.id !== botMsgId));
-      toast({
-        title: "Lỗi kết nối",
-        description: err instanceof Error ? err.message : "Không thể gửi tin nhắn. Vui lòng thử lại.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSending(false);
-    }
-  }, [isSending, getOrCreateConversation, sessionId, toast]);
+  const handleSend = useCallback(
+    async (text: string) => {
+      if (!text.trim() || isSending) return;
+
+      const trimmed = text.trim();
+      setIsSending(true);
+      setInput("");
+      setSuggestedReplies([]);
+
+      const userMsgId = nextId.current++;
+      const userMsg: Message = { id: userMsgId, role: "user", text: trimmed };
+      setMessages((prev) => [...prev, userMsg]);
+
+      try {
+        const res = await fetch(`${BASE_URL}/api/chat/message`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId, text: trimmed }),
+        });
+
+        if (!res.ok) {
+          const errData = (await res.json().catch(() => ({}))) as { error?: string };
+          throw new Error(errData.error ?? "Lỗi kết nối với server");
+        }
+
+        const data = (await res.json()) as {
+          botMessage: { text: string };
+          suggestedReplies?: string[];
+        };
+
+        const botMsg: Message = {
+          id: nextId.current++,
+          role: "bot",
+          text: data.botMessage.text,
+        };
+        setMessages((prev) => [...prev, botMsg]);
+        setSuggestedReplies(data.suggestedReplies ?? []);
+        setTimeout(() => inputRef.current?.focus(), 100);
+      } catch (err) {
+        // Roll back optimistic user message so UI stays in sync with server state
+        setMessages((prev) => prev.filter((m) => m.id !== userMsgId));
+        setInput(trimmed); // restore input so user can retry
+        toast({
+          title: "Lỗi kết nối",
+          description:
+            err instanceof Error
+              ? err.message
+              : "Không thể gửi tin nhắn. Vui lòng thử lại.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsSending(false);
+      }
+    },
+    [isSending, sessionId, toast]
+  );
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -189,21 +179,16 @@ export default function Chat() {
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] bg-background">
       {/* Header */}
-      <div className="bg-card border-b border-border/50 p-4 flex items-center justify-between sticky top-0 z-10">
+      <div className="bg-card border-b border-border/50 p-4 flex items-center sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary">
             <Bot className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="font-semibold text-lg flex items-center gap-2">
-              Điểm Tựa
-              <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                <Sparkles className="w-3 h-3" /> AI
-              </span>
-            </h1>
+            <h1 className="font-semibold text-lg">Điểm Tựa</h1>
             <p className="text-xs text-muted-foreground flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
-              Đang hoạt động · Powered by Claude
+              Đang hoạt động
             </p>
           </div>
         </div>
@@ -212,9 +197,13 @@ export default function Chat() {
       {/* Messages */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-4 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] bg-blend-overlay"
+        className="flex-1 overflow-y-auto p-4"
       >
-        {messages.length === 0 ? (
+        {isLoadingHistory ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center space-y-4 animate-in fade-in zoom-in duration-500">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary">
               <Bot className="w-8 h-8" />
@@ -224,7 +213,8 @@ export default function Chat() {
                 Xin chào, mình là Điểm Tựa
               </h2>
               <p className="text-muted-foreground mt-2 max-w-sm">
-                Mình ở đây để lắng nghe và chia sẻ cùng bạn mọi vui buồn trong cuộc sống học đường. Hãy bắt đầu câu chuyện nhé!
+                Mình ở đây để lắng nghe và chia sẻ cùng bạn mọi vui buồn trong
+                cuộc sống học đường. Hãy bắt đầu câu chuyện nhé!
               </p>
             </div>
             <div className="flex flex-wrap justify-center gap-2 mt-4 max-w-md">
@@ -252,9 +242,49 @@ export default function Chat() {
             {messages.map((msg) => (
               <MessageBubble key={msg.id} msg={msg} />
             ))}
+            {isSending && (
+              <div className="flex justify-start animate-in fade-in slide-in-from-bottom-2">
+                <div className="flex gap-3 max-w-[85%]">
+                  <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center bg-primary/20 text-primary">
+                    <Bot className="w-4 h-4" />
+                  </div>
+                  <div className="rounded-2xl rounded-tl-none px-4 py-3 bg-card border border-border/50 shadow-sm">
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-primary/50 animate-bounce" />
+                      <span
+                        className="w-2 h-2 rounded-full bg-primary/50 animate-bounce"
+                        style={{ animationDelay: "0.2s" }}
+                      />
+                      <span
+                        className="w-2 h-2 rounded-full bg-primary/50 animate-bounce"
+                        style={{ animationDelay: "0.4s" }}
+                      />
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      {/* Suggested replies */}
+      {suggestedReplies.length > 0 && (
+        <div className="px-4 pb-2 flex flex-wrap gap-2">
+          {suggestedReplies.map((reply) => (
+            <Button
+              key={reply}
+              variant="outline"
+              size="sm"
+              className="rounded-full text-xs"
+              onClick={() => handleSend(reply)}
+              disabled={isSending}
+            >
+              {reply}
+            </Button>
+          ))}
+        </div>
+      )}
 
       {/* Input Area */}
       <div className="bg-card border-t border-border/50 p-4">
