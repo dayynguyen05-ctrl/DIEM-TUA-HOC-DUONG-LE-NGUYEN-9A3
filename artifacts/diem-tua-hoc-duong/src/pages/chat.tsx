@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Bot, User, Loader2 } from "lucide-react";
+import { Send, Bot, User, Loader2, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getSessionId } from "@/lib/session";
 
@@ -9,6 +9,7 @@ interface Message {
   id: number;
   role: "user" | "bot";
   text: string;
+  streaming?: boolean;
 }
 
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
@@ -41,9 +42,7 @@ function MessageBubble({ msg }: { msg: Message }) {
       <div className={`flex gap-3 max-w-[85%] ${isBot ? "flex-row" : "flex-row-reverse"}`}>
         <div
           className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center ${
-            isBot
-              ? "bg-primary/20 text-primary"
-              : "bg-secondary/30 text-secondary-foreground"
+            isBot ? "bg-primary/20 text-primary" : "bg-secondary/30 text-secondary-foreground"
           }`}
         >
           {isBot ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
@@ -55,7 +54,20 @@ function MessageBubble({ msg }: { msg: Message }) {
               : "bg-primary text-primary-foreground rounded-tr-none shadow-md"
           }`}
         >
-          {formatText(msg.text)}
+          {msg.streaming && msg.text === "" ? (
+            <span className="flex items-center gap-1 py-1">
+              <span className="w-2 h-2 rounded-full bg-primary/50 animate-bounce" />
+              <span className="w-2 h-2 rounded-full bg-primary/50 animate-bounce" style={{ animationDelay: "0.2s" }} />
+              <span className="w-2 h-2 rounded-full bg-primary/50 animate-bounce" style={{ animationDelay: "0.4s" }} />
+            </span>
+          ) : (
+            <>
+              {formatText(msg.text)}
+              {msg.streaming && (
+                <span className="inline-block w-[2px] h-[1em] bg-primary/60 ml-[1px] align-middle animate-pulse" />
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -67,7 +79,6 @@ export default function Chat() {
   const sessionId = getSessionId();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
-  const [suggestedReplies, setSuggestedReplies] = useState<string[]>([]);
   const [isSending, setIsSending] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -81,7 +92,7 @@ export default function Chat() {
     }
   }, [messages]);
 
-  // Load chat history on mount — merge into state so concurrent sends are not overwritten
+  // Load chat history on mount
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -90,22 +101,17 @@ export default function Chat() {
           `${BASE_URL}/api/chat/history?sessionId=${encodeURIComponent(sessionId)}&limit=50`
         );
         if (!res.ok || cancelled) return;
-        const data = (await res.json()) as Array<{
-          id: number;
-          text: string;
-          sender: "user" | "bot";
-        }>;
+        const data = (await res.json()) as Array<{ text: string; sender: "user" | "bot" }>;
         if (data.length > 0 && !cancelled) {
           const historyMsgs = data.map((m) => ({
             id: nextId.current++,
             role: m.sender,
             text: m.text,
           }));
-          // Prepend history; keep any messages the user already sent during load
           setMessages((prev) => [...historyMsgs, ...prev]);
         }
       } catch {
-        // history load failure is non-critical
+        // non-critical
       } finally {
         if (!cancelled) setIsLoadingHistory(false);
       }
@@ -121,47 +127,71 @@ export default function Chat() {
       const trimmed = text.trim();
       setIsSending(true);
       setInput("");
-      setSuggestedReplies([]);
 
       const userMsgId = nextId.current++;
-      const userMsg: Message = { id: userMsgId, role: "user", text: trimmed };
-      setMessages((prev) => [...prev, userMsg]);
+      const botMsgId = nextId.current++;
+
+      setMessages((prev) => [
+        ...prev,
+        { id: userMsgId, role: "user", text: trimmed },
+        { id: botMsgId, role: "bot", text: "", streaming: true },
+      ]);
 
       try {
-        const res = await fetch(`${BASE_URL}/api/chat/message`, {
+        const res = await fetch(`${BASE_URL}/api/chat/gemini`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ sessionId, text: trimmed }),
         });
 
-        if (!res.ok) {
+        if (!res.ok || !res.body) {
           const errData = (await res.json().catch(() => ({}))) as { error?: string };
           throw new Error(errData.error ?? "Lỗi kết nối với server");
         }
 
-        const data = (await res.json()) as {
-          botMessage: { text: string };
-          suggestedReplies?: string[];
-        };
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
 
-        const botMsg: Message = {
-          id: nextId.current++,
-          role: "bot",
-          text: data.botMessage.text,
-        };
-        setMessages((prev) => [...prev, botMsg]);
-        setSuggestedReplies(data.suggestedReplies ?? []);
+        outer: while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            let json: { content?: string; done?: boolean; error?: string };
+            try {
+              json = JSON.parse(line.slice(6)) as typeof json;
+            } catch {
+              continue;
+            }
+            if (json.error) throw new Error(json.error);
+            if (json.done) break outer;
+            if (json.content) {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === botMsgId ? { ...m, text: m.text + json.content! } : m
+                )
+              );
+            }
+          }
+        }
+
+        // Mark streaming complete
+        setMessages((prev) =>
+          prev.map((m) => (m.id === botMsgId ? { ...m, streaming: false } : m))
+        );
         setTimeout(() => inputRef.current?.focus(), 100);
       } catch (err) {
-        // Roll back optimistic user message so UI stays in sync with server state
-        setMessages((prev) => prev.filter((m) => m.id !== userMsgId));
-        setInput(trimmed); // restore input so user can retry
+        // Remove only the bot bubble — user message is already persisted in DB
+        setMessages((prev) => prev.filter((m) => m.id !== botMsgId));
         toast({
           title: "Lỗi kết nối",
           description:
-            err instanceof Error
-              ? err.message
-              : "Không thể gửi tin nhắn. Vui lòng thử lại.",
+            err instanceof Error ? err.message : "Không thể gửi tin nhắn. Vui lòng thử lại.",
           variant: "destructive",
         });
       } finally {
@@ -185,20 +215,22 @@ export default function Chat() {
             <Bot className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="font-semibold text-lg">Điểm Tựa</h1>
+            <h1 className="font-semibold text-lg flex items-center gap-2">
+              Điểm Tựa
+              <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                <Sparkles className="w-3 h-3" /> AI
+              </span>
+            </h1>
             <p className="text-xs text-muted-foreground flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
-              Đang hoạt động
+              Đang hoạt động · Powered by Gemini
             </p>
           </div>
         </div>
       </div>
 
       {/* Messages */}
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto p-4"
-      >
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4">
         {isLoadingHistory ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -218,23 +250,20 @@ export default function Chat() {
               </p>
             </div>
             <div className="flex flex-wrap justify-center gap-2 mt-4 max-w-md">
-              {[
-                "Xin chào Điểm Tựa",
-                "Mình thấy áp lực học tập",
-                "Mình đang buồn",
-                "Làm sao để giảm stress?",
-              ].map((prompt) => (
-                <Button
-                  key={prompt}
-                  variant="outline"
-                  size="sm"
-                  className="rounded-full"
-                  onClick={() => handleSend(prompt)}
-                  disabled={isSending}
-                >
-                  {prompt}
-                </Button>
-              ))}
+              {["Xin chào Điểm Tựa", "Mình thấy áp lực học tập", "Mình đang buồn", "Làm sao để giảm stress?"].map(
+                (prompt) => (
+                  <Button
+                    key={prompt}
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full"
+                    onClick={() => handleSend(prompt)}
+                    disabled={isSending}
+                  >
+                    {prompt}
+                  </Button>
+                )
+              )}
             </div>
           </div>
         ) : (
@@ -242,49 +271,9 @@ export default function Chat() {
             {messages.map((msg) => (
               <MessageBubble key={msg.id} msg={msg} />
             ))}
-            {isSending && (
-              <div className="flex justify-start animate-in fade-in slide-in-from-bottom-2">
-                <div className="flex gap-3 max-w-[85%]">
-                  <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center bg-primary/20 text-primary">
-                    <Bot className="w-4 h-4" />
-                  </div>
-                  <div className="rounded-2xl rounded-tl-none px-4 py-3 bg-card border border-border/50 shadow-sm">
-                    <span className="flex items-center gap-1">
-                      <span className="w-2 h-2 rounded-full bg-primary/50 animate-bounce" />
-                      <span
-                        className="w-2 h-2 rounded-full bg-primary/50 animate-bounce"
-                        style={{ animationDelay: "0.2s" }}
-                      />
-                      <span
-                        className="w-2 h-2 rounded-full bg-primary/50 animate-bounce"
-                        style={{ animationDelay: "0.4s" }}
-                      />
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>
-
-      {/* Suggested replies */}
-      {suggestedReplies.length > 0 && (
-        <div className="px-4 pb-2 flex flex-wrap gap-2">
-          {suggestedReplies.map((reply) => (
-            <Button
-              key={reply}
-              variant="outline"
-              size="sm"
-              className="rounded-full text-xs"
-              onClick={() => handleSend(reply)}
-              disabled={isSending}
-            >
-              {reply}
-            </Button>
-          ))}
-        </div>
-      )}
 
       {/* Input Area */}
       <div className="bg-card border-t border-border/50 p-4">
@@ -304,7 +293,7 @@ export default function Chat() {
             type="submit"
             size="icon"
             className="w-12 h-12 rounded-full flex-shrink-0 shadow-md"
-            disabled={!input.trim() || isSending}
+            disabled={!input.trim() || isSending || isLoadingHistory}
           >
             {isSending ? (
               <Loader2 className="w-5 h-5 animate-spin" />
