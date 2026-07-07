@@ -14,13 +14,21 @@ interface Message {
 
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 
-/** Pick the most expressive Vietnamese voice available, preferring female. */
+/** Pick the best Vietnamese voice, prioritising Ngọc Huyền. */
 function pickVietnameseVoice(): SpeechSynthesisVoice | null {
   const voices = window.speechSynthesis.getVoices();
   const vi = voices.filter((v) => v.lang.startsWith("vi"));
   if (vi.length === 0) return null;
-  // Prefer female-sounding names (common keywords across platforms)
-  const femaleKeywords = ["female", "woman", "girl", "thu", "lan", "mai", "huong", "linh", "na"];
+
+  // 1st priority: Ngọc Huyền (Google Chrome: "Google Ngoc Huyen")
+  const ngocHuyen = vi.find((v) => {
+    const n = v.name.toLowerCase().replace(/[\s-]/g, "");
+    return n.includes("ngochuyen") || n.includes("ngọchuyền") || n.includes("huyền") || n.includes("huyen");
+  });
+  if (ngocHuyen) return ngocHuyen;
+
+  // 2nd priority: any female-sounding Vietnamese voice
+  const femaleKeywords = ["female", "woman", "thu", "lan", "mai", "huong", "linh"];
   const female = vi.find((v) =>
     femaleKeywords.some((k) => v.name.toLowerCase().includes(k))
   );
