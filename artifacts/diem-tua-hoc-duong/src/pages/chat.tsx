@@ -14,15 +14,52 @@ interface Message {
 
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 
+/** Pick the most expressive Vietnamese voice available, preferring female. */
+function pickVietnameseVoice(): SpeechSynthesisVoice | null {
+  const voices = window.speechSynthesis.getVoices();
+  const vi = voices.filter((v) => v.lang.startsWith("vi"));
+  if (vi.length === 0) return null;
+  // Prefer female-sounding names (common keywords across platforms)
+  const femaleKeywords = ["female", "woman", "girl", "thu", "lan", "mai", "huong", "linh", "na"];
+  const female = vi.find((v) =>
+    femaleKeywords.some((k) => v.name.toLowerCase().includes(k))
+  );
+  return female ?? vi[0];
+}
+
 function speakVietnamese(text: string) {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-  // Strip markdown bold markers before speaking
-  const clean = text.replace(/\*\*([^*]+)\*\*/g, "$1");
+
+  // Strip markdown bold markers and trim whitespace before speaking
+  const clean = text
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\*/g, "")
+    .trim();
+
   window.speechSynthesis.cancel();
-  const utt = new SpeechSynthesisUtterance(clean);
-  utt.lang = "vi-VN";
-  utt.rate = 0.9;
-  window.speechSynthesis.speak(utt);
+
+  const speak = () => {
+    const utt = new SpeechSynthesisUtterance(clean);
+    utt.lang = "vi-VN";
+    utt.rate = 0.82;   // Chậm nhẹ — thân thiện, không vội
+    utt.pitch = 1.15;  // Cao nhẹ — ấm áp, có cảm xúc
+    utt.volume = 1;
+
+    const voice = pickVietnameseVoice();
+    if (voice) utt.voice = voice;
+
+    window.speechSynthesis.speak(utt);
+  };
+
+  // Voices may not be loaded yet on first call — wait if needed
+  if (window.speechSynthesis.getVoices().length > 0) {
+    speak();
+  } else {
+    window.speechSynthesis.onvoiceschanged = () => {
+      window.speechSynthesis.onvoiceschanged = null;
+      speak();
+    };
+  }
 }
 
 function formatText(text: string) {
