@@ -98,10 +98,70 @@ const words: Word[] = [
   { en: "cyberbullying", vi: "bắt nạt trực tuyến", phonetic: "/ˈsaɪbəˌbʊliɪŋ/", example: "Cyberbullying is harmful.", exampleVi: "Bắt nạt trực tuyến rất có hại.", level: "Trung cấp", topic: "Công nghệ" },
   { en: "privacy", vi: "quyền riêng tư", phonetic: "/ˈprɪvəsi/", example: "Protect your online privacy.", exampleVi: "Hãy bảo vệ quyền riêng tư trực tuyến.", level: "Trung cấp", topic: "Công nghệ" },
   { en: "application", vi: "ứng dụng", phonetic: "/ˌæplɪˈkeɪʃən/", example: "Download the application.", exampleVi: "Hãy tải ứng dụng xuống.", level: "Cơ bản", topic: "Công nghệ" },
+
+  // ── Tâm lý học ──
+  { en: "psychology", vi: "tâm lý học", phonetic: "/saɪˈkɒlədʒi/", example: "Psychology helps us understand the mind.", exampleVi: "Tâm lý học giúp chúng ta hiểu về tâm trí.", level: "Trung cấp", topic: "Tâm lý học" },
+  { en: "anxiety", vi: "lo âu", phonetic: "/æŋˈzaɪəti/", example: "Anxiety can affect your sleep.", exampleVi: "Lo âu có thể ảnh hưởng đến giấc ngủ.", level: "Trung cấp", topic: "Tâm lý học" },
+  { en: "depression", vi: "trầm cảm", phonetic: "/dɪˈprɛʃən/", example: "Depression is a serious condition.", exampleVi: "Trầm cảm là một tình trạng nghiêm trọng.", level: "Trung cấp", topic: "Tâm lý học" },
+  { en: "mindfulness", vi: "chánh niệm", phonetic: "/ˈmaɪndflnəs/", example: "Practice mindfulness every day.", exampleVi: "Thực hành chánh niệm mỗi ngày.", level: "Nâng cao", topic: "Tâm lý học" },
+  { en: "therapy", vi: "liệu pháp, trị liệu", phonetic: "/ˈθɛrəpi/", example: "Therapy can help you heal.", exampleVi: "Liệu pháp có thể giúp bạn chữa lành.", level: "Trung cấp", topic: "Tâm lý học" },
+  { en: "self-esteem", vi: "lòng tự trọng, tự tin", phonetic: "/ˌsɛlf ɪˈstiːm/", example: "Build your self-esteem daily.", exampleVi: "Xây dựng lòng tự trọng mỗi ngày.", level: "Trung cấp", topic: "Tâm lý học" },
+  { en: "wellbeing", vi: "hạnh phúc, sức khỏe tinh thần", phonetic: "/ˈwɛlˌbiːɪŋ/", example: "Focus on your wellbeing.", exampleVi: "Tập trung vào sức khỏe tinh thần của bạn.", level: "Nâng cao", topic: "Tâm lý học" },
+  { en: "coping", vi: "ứng phó, đối phó", phonetic: "/ˈkoʊpɪŋ/", example: "Learn healthy coping skills.", exampleVi: "Học kỹ năng ứng phó lành mạnh.", level: "Trung cấp", topic: "Tâm lý học" },
+  { en: "empathy", vi: "đồng cảm", phonetic: "/ˈɛmpəθi/", example: "Empathy helps us connect with others.", exampleVi: "Đồng cảm giúp chúng ta kết nối với người khác.", level: "Trung cấp", topic: "Tâm lý học" },
+  { en: "trauma", vi: "chấn thương tâm lý", phonetic: "/ˈtrɔːmə/", example: "It takes time to heal from trauma.", exampleVi: "Chữa lành chấn thương tâm lý cần có thời gian.", level: "Nâng cao", topic: "Tâm lý học" },
+
+  // ── Bạn bè ──
+  { en: "friendship", vi: "tình bạn", phonetic: "/ˈfrɛndʃɪp/", example: "True friendship is precious.", exampleVi: "Tình bạn thật sự rất quý giá.", level: "Cơ bản", topic: "Bạn bè" },
+  { en: "trust", vi: "tin tưởng", phonetic: "/trʌst/", example: "Trust is the foundation of friendship.", exampleVi: "Tin tưởng là nền tảng của tình bạn.", level: "Cơ bản", topic: "Bạn bè" },
+  { en: "loyal", vi: "trung thành", phonetic: "/ˈlɔɪəl/", example: "Be loyal to your friends.", exampleVi: "Hãy trung thành với bạn bè.", level: "Trung cấp", topic: "Bạn bè" },
+  { en: "support", vi: "hỗ trợ, ủng hộ", phonetic: "/səˈpɔːrt/", example: "Support each other in hard times.", exampleVi: "Hãy hỗ trợ nhau trong những lúc khó khăn.", level: "Cơ bản", topic: "Bạn bè" },
+  { en: "conflict", vi: "xung đột, mâu thuẫn", phonetic: "/ˈkɒnflɪkt/", example: "Resolve conflicts calmly.", exampleVi: "Hãy giải quyết xung đột một cách bình tĩnh.", level: "Trung cấp", topic: "Bạn bè" },
+  { en: "bond", vi: "gắn kết, sợi dây kết nối", phonetic: "/bɒnd/", example: "Their bond grew stronger over time.", exampleVi: "Sự gắn kết của họ ngày càng mạnh hơn theo thời gian.", level: "Trung cấp", topic: "Bạn bè" },
+  { en: "peer", vi: "bạn đồng trang lứa", phonetic: "/pɪər/", example: "Peer support is very helpful.", exampleVi: "Sự hỗ trợ từ bạn đồng trang lứa rất có ích.", level: "Trung cấp", topic: "Bạn bè" },
+  { en: "reconcile", vi: "hòa giải", phonetic: "/ˈrɛkənsaɪl/", example: "Try to reconcile after a fight.", exampleVi: "Hãy cố hòa giải sau khi mâu thuẫn.", level: "Nâng cao", topic: "Bạn bè" },
+  { en: "teammate", vi: "đồng đội", phonetic: "/ˈtiːmmeɪt/", example: "Work well with your teammates.", exampleVi: "Hãy làm việc tốt với đồng đội của mình.", level: "Cơ bản", topic: "Bạn bè" },
+  { en: "inclusive", vi: "bao dung, hòa nhập", phonetic: "/ɪnˈkluːsɪv/", example: "Be inclusive to everyone around you.", exampleVi: "Hãy bao dung với tất cả mọi người xung quanh.", level: "Nâng cao", topic: "Bạn bè" },
+
+  // ── Môi trường ──
+  { en: "environment", vi: "môi trường", phonetic: "/ɪnˈvaɪrənmənt/", example: "We must protect the environment.", exampleVi: "Chúng ta phải bảo vệ môi trường.", level: "Cơ bản", topic: "Môi trường" },
+  { en: "pollution", vi: "ô nhiễm", phonetic: "/pəˈluːʃən/", example: "Air pollution is harmful to health.", exampleVi: "Ô nhiễm không khí rất có hại cho sức khỏe.", level: "Cơ bản", topic: "Môi trường" },
+  { en: "sustainable", vi: "bền vững", phonetic: "/səˈsteɪnəbəl/", example: "Choose a sustainable lifestyle.", exampleVi: "Hãy chọn lối sống bền vững.", level: "Trung cấp", topic: "Môi trường" },
+  { en: "recycle", vi: "tái chế", phonetic: "/ˌriːˈsaɪkəl/", example: "Recycle your plastic bottles.", exampleVi: "Hãy tái chế chai nhựa của bạn.", level: "Cơ bản", topic: "Môi trường" },
+  { en: "climate", vi: "khí hậu", phonetic: "/ˈklaɪmɪt/", example: "Climate change affects us all.", exampleVi: "Biến đổi khí hậu ảnh hưởng đến tất cả chúng ta.", level: "Cơ bản", topic: "Môi trường" },
+  { en: "conservation", vi: "bảo tồn", phonetic: "/ˌkɒnsəˈveɪʃən/", example: "Wildlife conservation is important.", exampleVi: "Bảo tồn động vật hoang dã rất quan trọng.", level: "Trung cấp", topic: "Môi trường" },
+  { en: "emission", vi: "khí thải", phonetic: "/ɪˈmɪʃən/", example: "We must reduce carbon emissions.", exampleVi: "Chúng ta phải giảm khí thải carbon.", level: "Trung cấp", topic: "Môi trường" },
+  { en: "renewable", vi: "tái tạo", phonetic: "/rɪˈnjuːəbəl/", example: "Solar power is a renewable resource.", exampleVi: "Năng lượng mặt trời là nguồn tài nguyên tái tạo.", level: "Trung cấp", topic: "Môi trường" },
+  { en: "ecosystem", vi: "hệ sinh thái", phonetic: "/ˈiːkoʊˌsɪstəm/", example: "Ecosystems need our protection.", exampleVi: "Hệ sinh thái cần sự bảo vệ của chúng ta.", level: "Trung cấp", topic: "Môi trường" },
+  { en: "biodiversity", vi: "đa dạng sinh học", phonetic: "/ˌbaɪoʊdaɪˈvɜːrsɪti/", example: "Biodiversity is essential for life.", exampleVi: "Đa dạng sinh học rất thiết yếu cho sự sống.", level: "Nâng cao", topic: "Môi trường" },
+
+  // ── Nghệ thuật ──
+  { en: "creativity", vi: "sự sáng tạo", phonetic: "/ˌkriːeɪˈtɪvɪti/", example: "Creativity has no limits.", exampleVi: "Sự sáng tạo không có giới hạn.", level: "Trung cấp", topic: "Nghệ thuật" },
+  { en: "inspire", vi: "truyền cảm hứng", phonetic: "/ɪnˈspaɪər/", example: "Music can inspire everyone.", exampleVi: "Âm nhạc có thể truyền cảm hứng cho mọi người.", level: "Trung cấp", topic: "Nghệ thuật" },
+  { en: "melody", vi: "giai điệu", phonetic: "/ˈmɛlədi/", example: "I love the melody of this song.", exampleVi: "Tôi thích giai điệu của bài hát này.", level: "Cơ bản", topic: "Nghệ thuật" },
+  { en: "rhythm", vi: "nhịp điệu", phonetic: "/ˈrɪðəm/", example: "Feel the rhythm of the music.", exampleVi: "Hãy cảm nhận nhịp điệu của âm nhạc.", level: "Cơ bản", topic: "Nghệ thuật" },
+  { en: "performance", vi: "màn trình diễn", phonetic: "/pərˈfɔːrməns/", example: "Her performance was amazing.", exampleVi: "Màn trình diễn của cô ấy thật tuyệt vời.", level: "Trung cấp", topic: "Nghệ thuật" },
+  { en: "passion", vi: "đam mê", phonetic: "/ˈpæʃən/", example: "Follow your passion every day.", exampleVi: "Hãy theo đuổi đam mê của bạn mỗi ngày.", level: "Cơ bản", topic: "Nghệ thuật" },
+  { en: "talent", vi: "tài năng", phonetic: "/ˈtælənt/", example: "Everyone has a unique talent.", exampleVi: "Mỗi người đều có tài năng riêng của mình.", level: "Cơ bản", topic: "Nghệ thuật" },
+  { en: "appreciate", vi: "trân trọng, đánh giá cao", phonetic: "/əˈpriːʃieɪt/", example: "Appreciate the beauty around you.", exampleVi: "Hãy trân trọng vẻ đẹp xung quanh bạn.", level: "Trung cấp", topic: "Nghệ thuật" },
+  { en: "exhibition", vi: "triển lãm", phonetic: "/ˌɛksɪˈbɪʃən/", example: "We visited an art exhibition.", exampleVi: "Chúng tôi tham quan một triển lãm nghệ thuật.", level: "Trung cấp", topic: "Nghệ thuật" },
+  { en: "compose", vi: "sáng tác", phonetic: "/kəmˈpoʊz/", example: "She composed a beautiful song.", exampleVi: "Cô ấy sáng tác một bài hát rất đẹp.", level: "Trung cấp", topic: "Nghệ thuật" },
+
+  // ── Xã hội ──
+  { en: "community", vi: "cộng đồng", phonetic: "/kəˈmjuːnɪti/", example: "Help your local community.", exampleVi: "Hãy giúp đỡ cộng đồng địa phương của bạn.", level: "Cơ bản", topic: "Xã hội" },
+  { en: "equality", vi: "bình đẳng", phonetic: "/ɪˈkwɒlɪti/", example: "Equality matters for everyone.", exampleVi: "Bình đẳng quan trọng với tất cả mọi người.", level: "Trung cấp", topic: "Xã hội" },
+  { en: "diversity", vi: "sự đa dạng", phonetic: "/daɪˈvɜːrsɪti/", example: "Embrace diversity around you.", exampleVi: "Hãy chào đón sự đa dạng xung quanh bạn.", level: "Trung cấp", topic: "Xã hội" },
+  { en: "justice", vi: "công lý, công bằng", phonetic: "/ˈdʒʌstɪs/", example: "Speak up for justice.", exampleVi: "Hãy lên tiếng vì công lý.", level: "Trung cấp", topic: "Xã hội" },
+  { en: "citizenship", vi: "quyền công dân", phonetic: "/ˈsɪtɪzənʃɪp/", example: "Be a responsible citizen.", exampleVi: "Hãy là một công dân có trách nhiệm.", level: "Trung cấp", topic: "Xã hội" },
+  { en: "solidarity", vi: "đoàn kết", phonetic: "/ˌsɒlɪˈdærɪti/", example: "Solidarity makes us stronger.", exampleVi: "Đoàn kết làm chúng ta mạnh mẽ hơn.", level: "Nâng cao", topic: "Xã hội" },
+  { en: "awareness", vi: "nhận thức", phonetic: "/əˈweənəs/", example: "Raise awareness about mental health.", exampleVi: "Nâng cao nhận thức về sức khỏe tâm thần.", level: "Trung cấp", topic: "Xã hội" },
+  { en: "contribute", vi: "đóng góp", phonetic: "/kənˈtrɪbjuːt/", example: "Contribute positively to your school.", exampleVi: "Hãy đóng góp tích cực cho trường của bạn.", level: "Trung cấp", topic: "Xã hội" },
+  { en: "influence", vi: "ảnh hưởng", phonetic: "/ˈɪnfluəns/", example: "Be a positive influence on others.", exampleVi: "Hãy là người có ảnh hưởng tích cực đến người khác.", level: "Trung cấp", topic: "Xã hội" },
+  { en: "empowerment", vi: "trao quyền, tự chủ", phonetic: "/ɪmˈpaʊərmənt/", example: "Education leads to empowerment.", exampleVi: "Giáo dục dẫn đến sự tự chủ.", level: "Nâng cao", topic: "Xã hội" },
 ];
 
 const LEVELS = ["Tất cả", "Cơ bản", "Trung cấp", "Nâng cao"] as const;
-const TOPICS = ["Tất cả", "Học đường", "Cảm xúc", "Khoa học", "Giao tiếp", "Sức khỏe", "Nghề nghiệp", "Cuộc sống", "Công nghệ"] as const;
+const TOPICS = ["Tất cả", "Học đường", "Cảm xúc", "Khoa học", "Giao tiếp", "Sức khỏe", "Nghề nghiệp", "Cuộc sống", "Công nghệ", "Tâm lý học", "Bạn bè", "Môi trường", "Nghệ thuật", "Xã hội"] as const;
 const QUIZ_SIZE = 10;
 
 const levelColors: Record<string, string> = {

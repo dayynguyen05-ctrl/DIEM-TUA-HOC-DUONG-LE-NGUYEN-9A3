@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Bot, User, Loader2, Sparkles } from "lucide-react";
+import { Send, Bot, User, Loader2, Sparkles, Volume2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getSessionId } from "@/lib/session";
 
@@ -13,6 +13,17 @@ interface Message {
 }
 
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
+
+function speakVietnamese(text: string) {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  // Strip markdown bold markers before speaking
+  const clean = text.replace(/\*\*([^*]+)\*\*/g, "$1");
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(clean);
+  utt.lang = "vi-VN";
+  utt.rate = 0.9;
+  window.speechSynthesis.speak(utt);
+}
 
 function formatText(text: string) {
   const lines = text.split("\n");
@@ -47,26 +58,39 @@ function MessageBubble({ msg }: { msg: Message }) {
         >
           {isBot ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
         </div>
-        <div
-          className={`rounded-2xl px-4 py-2 text-sm sm:text-base leading-relaxed ${
-            isBot
-              ? "bg-card border border-border/50 text-card-foreground rounded-tl-none shadow-sm"
-              : "bg-primary text-primary-foreground rounded-tr-none shadow-md"
-          }`}
-        >
-          {msg.streaming && msg.text === "" ? (
-            <span className="flex items-center gap-1 py-1">
-              <span className="w-2 h-2 rounded-full bg-primary/50 animate-bounce" />
-              <span className="w-2 h-2 rounded-full bg-primary/50 animate-bounce" style={{ animationDelay: "0.2s" }} />
-              <span className="w-2 h-2 rounded-full bg-primary/50 animate-bounce" style={{ animationDelay: "0.4s" }} />
-            </span>
-          ) : (
-            <>
-              {formatText(msg.text)}
-              {msg.streaming && (
-                <span className="inline-block w-[2px] h-[1em] bg-primary/60 ml-[1px] align-middle animate-pulse" />
-              )}
-            </>
+        <div className="flex flex-col gap-1 min-w-0">
+          <div
+            className={`rounded-2xl px-4 py-2 text-sm sm:text-base leading-relaxed ${
+              isBot
+                ? "bg-card border border-border/50 text-card-foreground rounded-tl-none shadow-sm"
+                : "bg-primary text-primary-foreground rounded-tr-none shadow-md"
+            }`}
+          >
+            {msg.streaming && msg.text === "" ? (
+              <span className="flex items-center gap-1 py-1">
+                <span className="w-2 h-2 rounded-full bg-primary/50 animate-bounce" />
+                <span className="w-2 h-2 rounded-full bg-primary/50 animate-bounce" style={{ animationDelay: "0.2s" }} />
+                <span className="w-2 h-2 rounded-full bg-primary/50 animate-bounce" style={{ animationDelay: "0.4s" }} />
+              </span>
+            ) : (
+              <>
+                {formatText(msg.text)}
+                {msg.streaming && (
+                  <span className="inline-block w-[2px] h-[1em] bg-primary/60 ml-[1px] align-middle animate-pulse" />
+                )}
+              </>
+            )}
+          </div>
+          {/* TTS button — only for completed bot messages */}
+          {isBot && !msg.streaming && msg.text && (
+            <button
+              onClick={() => speakVietnamese(msg.text)}
+              title="Nghe đọc"
+              className="self-start flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors px-1 py-0.5 rounded"
+            >
+              <Volume2 className="w-3 h-3" />
+              <span>Nghe</span>
+            </button>
           )}
         </div>
       </div>
